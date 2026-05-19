@@ -1,11 +1,10 @@
 {
   "name": "tls-logistics-backend",
   "version": "1.0.0",
-  "description": "TLS Logistics Backend Processing Engine",
-  "main": "src/functions/index.js",
+  "description": "TLS Logistics Backend Engine",
+  "main": "api/index.js",
   "scripts": {
-    "start": "func start",
-    "test": "echo \"No tests specified\" && exit 0"
+    "start": "func start"
   },
   "dependencies": {
     "@azure/functions": "^4.0.0",
