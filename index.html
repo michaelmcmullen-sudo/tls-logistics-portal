@@ -121,10 +121,10 @@
   </div>
 
   <script>
-    // This value links dynamically to your Function URL once deployed to Azure
+    // Dynamically roots itself to the built-in Azure API pipeline route automatically
     const AZURE_API_BASE_URL = window.location.origin.includes("localhost") 
       ? "http://localhost:7071/api" 
-      : window.location.origin.replace("-ui", "-api") + "/api"; 
+      : window.location.origin + "/api"; 
 
     function showView(viewId, element) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
