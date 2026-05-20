@@ -168,18 +168,34 @@ const GOOGLE_API_URL = "https://default9d9433a6f69946a1b627cbbbbb7433.6f.environ
       }
     }
 
-    async function submitShippingLog() {
-      const chassis = document.getElementById('chassisInput').value;
-      const week = document.getElementById('shipWeek').value;
-      const date = document.getElementById('shipDate').value;
-      if(!chassis || !week || !date) { alert("Please complete input parameter assignments."); return; }
-      
-      st("Processing shipping layout inputs...");
-      const data = await apiCall("processShipping", { chassis, week, date });
-      alert(data.message);
-      document.getElementById('chassisInput').value = "";
-      ready();
-    }
+    function submitShippingLog() {
+  const chassis = document.getElementById('chassisInput').value;
+  const week = document.getElementById('shipWeek').value;
+  const date = document.getElementById('shipDate').value;
+  if(!chassis || !week || !date) { alert("Please complete input parameter assignments."); return; }
+  
+  st("Generating operational drop file...");
+  
+  // 1. Convert chassis inputs into CSV lines
+  const chassisList = chassis.split('\n').map(r => r.trim()).filter(r => r.length > 0);
+  let csvContent = "Chassis,Week,ExecutionDate\n";
+  chassisList.forEach(c => {
+    csvContent += `"${c}","${week}","${date}"\n`;
+  });
+
+  // 2. Force download the file to the user's device
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute("download", `log_drop_${Date.now()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  alert("Drop file downloaded! Please move it to your Teams 'DropBox' folder to process.");
+  document.getElementById('chassisInput').value = "";
+  ready();
+}
 
     async function executeCarpetExport() {
       const model = document.getElementById('exportModel').value;
