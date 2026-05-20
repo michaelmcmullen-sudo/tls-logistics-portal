@@ -106,7 +106,7 @@
   <script>
     // --- TARGETED SHAREPOINT ENDPOINTS DERIVED FROM YOUR RESOURCE PATH ---
     const SHAREPOINT_API_ROOT = "https://adlerpelzer.sharepoint.com/sites/FixIt";
-    const BUFFER_FILE_RELATIVE_PATH = "/Sdilene dokumenty/General/AML TLS/Log_Buffer.xlsx";
+    const BUFFER_FILE_RELATIVE_PATH = "/Shared Documents/General/AML TLS/Log_Buffer.xlsx";
     const EXCEL_TABLE_API_URL = `${SHAREPOINT_API_ROOT}/_api/v2.0/sites/root/drive/root:${encodeURIComponent(BUFFER_FILE_RELATIVE_PATH)}:/workbook/tables('BufferTable')/rows`;
 
     function showView(viewId, element) {
