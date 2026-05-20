@@ -13,15 +13,12 @@
     .nav-item.active { opacity: 1; background: rgba(255,255,255,0.1); border-left: 4px solid var(--accent); }
     .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
     header { background: var(--white); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
-    .header-controls { display: flex; align-items: center; gap: 20px; }
-    .help-toggle-container { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #636e72; background: #f8f9fa; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); cursor: pointer; }
     .status-pill { padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb; display: flex; align-items: center; gap: 8px; }
     .view-container { padding: 30px; overflow-y: auto; flex-grow: 1; }
     .view { display: none; animation: fadeIn 0.3s ease-out; }
     .view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .card { background: var(--white); border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid rgba(0,0,0,0.03); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
     .field { display: flex; flex-direction: column; }
     label { font-size: 11px; font-weight: 700; margin-bottom: 6px; color: #636e72; text-transform: uppercase; }
@@ -48,7 +45,7 @@
     <header>
       <div id="view-title" style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">Teams Logistics Control Center</div>
       <div class="header-controls">
-        <div class="status-pill" id="status"><i class="fas fa-circle-check"></i> System Connected via Apps Script</div>
+        <div class="status-pill" id="status"><i class="fas fa-circle-check"></i> Connected via Teams Files</div>
       </div>
     </header>
 
@@ -58,7 +55,7 @@
         <div class="card">
           <h2><i class="fas fa-file-import"></i> Daily Sync</h2>
           <div style="display:flex; gap:15px; align-items:flex-end;">
-            <button class="btn btn-primary" onclick="triggerAzureSync()">TRIGGER TEAMS SYSTEM SYNC</button>
+            <button class="btn btn-primary" onclick="triggerFileAction('syncDemandData')">TRIGGER TEAMS SYSTEM SYNC</button>
           </div>
         </div>
 
@@ -67,14 +64,14 @@
           <div class="grid">
             <div class="field">
               <label>Model Range</label>
-              <select id="filterModel" onchange="fetchEarliestActiveWeek()">
+              <select id="filterModel">
                 <option value="AM5">AM5 (+ AM7 Merge)</option>
                 <option value="AM6">AM6</option>
               </select>
             </div>
-            <div class="field"><label>Week Number</label><input type="number" id="filterWeek"></div>
+            <div class="field"><label>Week Number</label><input type="text" id="filterWeek" placeholder="e.g. Wk 24"></div>
             <div class="field" style="justify-content: flex-end;">
-              <button class="btn btn-success" onclick="runLabelExport()">GENERATE EXPORT</button>
+              <button class="btn btn-success" onclick="triggerFileAction('getFilteredCarpetExport')">GENERATE EXPORT</button>
             </div>
           </div>
         </div>
@@ -85,8 +82,8 @@
           <h2><i class="fas fa-shipping-fast"></i> Process Outbound Dispatch</h2>
           <div class="grid" style="grid-template-columns: 1fr;">
             <div class="field">
-              <label>Chassis Serial Entry List (Comma or Line Separated)</label>
-              <textarea id="chassisInput" rows="6" placeholder="Enter Chassis IDs..."></textarea>
+              <label>Chassis Serial Entry List (One per line or column paste)</label>
+              <textarea id="chassisInput" rows="6" placeholder="Paste Chassis IDs here..."></textarea>
             </div>
           </div>
           <div style="margin-top:15px; display:flex; gap:10px;">
@@ -99,23 +96,7 @@
       <div id="view-viewer" class="view">
         <div class="card">
           <h2><i class="fas fa-search"></i> Live Teams Database Explorer</h2>
-          <div style="display:flex; gap:15px; align-items:flex-end; margin-bottom:20px;">
-            <div class="field" style="width:300px;">
-              <label>Select Target Database Spreadsheet Tab</label>
-              <select id="tabSelect">
-                <option value="AP TLS AM3 BOOTKITS">AP TLS AM3 BOOTKITS</option>
-                <option value="AP TLS AM5">AP TLS AM5</option>
-                <option value="AP TLS AM6">AP TLS AM6</option>
-                <option value="AP TLS AM7">AP TLS AM7</option>
-              </select>
-            </div>
-            <button class="btn btn-primary" onclick="fetchLiveExplorerData()">FETCH LIVE TABLE DATA</button>
-          </div>
-          <div class="table-wrapper">
-            <div style="overflow:auto; max-height:500px;">
-              <table id="explorerTable"><thead><tr id="tableHeader"></tr></thead><tbody id="tableBody"></tbody></table>
-            </div>
-          </div>
+          <p style="color:#636e72; font-size:13px;">Data is managed through your target file directory links.</p>
         </div>
       </div>
 
@@ -123,8 +104,10 @@
   </div>
 
   <script>
-    // PASTE YOUR DEPLOYED GOOGLE WEB APP MACRO ENDPOINT HERE
-    const GOOGLE_SCRIPT_WEBAPP_URL = "REPLACE_WITH_YOUR_DEPLOYED_GOOGLE_WEB_APP_URL";
+    // --- TARGETED SHAREPOINT ENDPOINTS DERIVED FROM YOUR RESOURCE PATH ---
+    const SHAREPOINT_API_ROOT = "https://adlerpelzer.sharepoint.com/sites/FixIt";
+    const BUFFER_FILE_RELATIVE_PATH = "/Sdilene dokumenty/General/AML TLS/Log_Buffer.xlsx";
+    const EXCEL_TABLE_API_URL = `${SHAREPOINT_API_ROOT}/_api/v2.0/sites/root/drive/root:${encodeURIComponent(BUFFER_FILE_RELATIVE_PATH)}:/workbook/tables('BufferTable')/rows`;
 
     function showView(viewId, element) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -133,94 +116,65 @@
       if(element) element.classList.add('active');
     }
 
-    // Modern baseline wrapper handling CORS security bypass pipelines
-    async function postToBackend(actionName, payload = {}) {
+    // Appends rows directly to the Buffer Excel Table using Microsoft Graph API
+    async function appendToExcelBuffer(rowsArray) {
       try {
-        await fetch(GOOGLE_SCRIPT_WEBAPP_URL, { 
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: actionName, ...payload }) 
+        const response = await fetch(EXCEL_TABLE_API_URL, {
+          method: "POST",
+          headers: {
+            "Accept": "application/json;odata=verbose",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ values: rowsArray })
         });
-        return true;
-      } catch(e) { 
-        console.error(e);
-        return false; 
+        return response.ok;
+      } catch (error) {
+        console.error("SharePoint connection issue:", error);
+        return false;
       }
-    }
-
-    async function triggerAzureSync() {
-      st("Syncing Teams Sheets...");
-      const success = await postToBackend("syncDemandData");
-      if(success) {
-        alert("Global demand synchronization execution cycle finalized successfully.");
-      } else {
-        alert("Sync connection failed.");
-      }
-      ready();
-    }
-
-    async function fetchEarliestActiveWeek() {
-      const model = document.getElementById('filterModel').value;
-      // Because 'no-cors' blocks reading string data returns, we catch anomalies silently
-      try {
-        await fetch(GOOGLE_SCRIPT_WEBAPP_URL, { 
-          method: 'POST', 
-          mode: 'no-cors',
-          body: JSON.stringify({ action: "getEarliestWeek", model }) 
-        });
-      } catch(e) { console.error(e); }
-    }
-
-    async function runLabelExport() {
-      const model = document.getElementById('filterModel').value;
-      const weekNum = document.getElementById('filterWeek').value;
-      if(!weekNum) { alert("Identify target week parameter constraints."); return; }
-      
-      st("Processing label export matrices...");
-      const success = await postToBackend("getFilteredCarpetExport", { model, weekNum });
-      if(success) {
-        alert("Export compilation transaction request piped to database successfully.");
-      } else {
-        alert("Failed to fetch label compilation matrix.");
-      }
-      ready();
     }
 
     async function submitShipping(type) {
-      const chassisList = document.getElementById('chassisInput').value;
-      if(!chassisList.trim()) { alert("Please provide valid chassis numbers."); return; }
+      const input = document.getElementById('chassisInput').value;
+      const lines = input.split('\n').map(r => r.trim()).filter(r => r.length > 0);
+      
+      if(lines.length === 0) { alert("Please input active chassis IDs."); return; }
+      st("Appending rows to Teams buffer file...");
 
-      st("Logging outbound shipment records...");
-      const success = await postToBackend("processShipping", { chassisList, type });
+      const executionDate = new Date().toISOString().split('T')[0];
+      
+      // Structure rows array matching: [Chassis, Week, ExecutionDate]
+      const rowsToAppend = lines.map(chassis => [chassis, type.toUpperCase(), executionDate]);
+
+      const success = await appendToExcelBuffer(rowsToAppend);
       if(success) {
-        alert(`Outbound logistics update for ${type.toUpperCase()} sent to database successfully.`);
+        alert(`Successfully appended ${lines.length} records to Log_Buffer.xlsx! Power Automate will now process them.`);
         document.getElementById('chassisInput').value = "";
       } else {
-        alert("Outbound logistics update failed.");
+        alert("Transaction failed. Check if the file is locked open or if table names do not match.");
       }
       ready();
     }
 
-    async function fetchLiveExplorerData() {
-      const tabName = document.getElementById('tabSelect').value;
-      st("Fetching historical table arrays...");
+    async function triggerFileAction(actionName) {
+      const model = document.getElementById('filterModel')?.value || "N/A";
+      const week = document.getElementById('filterWeek')?.value || "N/A";
       
-      // Note: If you require rendering deep real-time raw table queries inside this 
-      // specific visual explorer box grid, you will need to switch your configuration 
-      // from fetch to an JSONP callback script injection script due to Google's 'no-cors' rule.
-      const success = await postToBackend("getTabData", { tabName });
+      st("Sending action parameters to buffer...");
+      // For utility commands, we insert a specialized command flag line into the spreadsheet row array
+      const commandRow = [[`COMMAND:${actionName}`, model, week]];
+      
+      const success = await appendToExcelBuffer(commandRow);
       if(success) {
-        alert("Data array inquiry routed. Note: Visual data grid rendering disabled due to corporate cloud perimeter restrictions.");
+        alert(`Action request [${actionName}] sent to Teams log buffer.`);
       } else {
-        alert("Error reading table array datasets.");
+        alert("Action routing failed.");
       }
       ready();
     }
 
     function st(text) { document.getElementById('status').innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${text}`; }
-    function ready() { document.getElementById('status').innerHTML = `<i class="fas fa-circle-check"></i> System Connected via Apps Script`; }
-    window.onload = fetchEarliestActiveWeek;
+    function ready() { document.getElementById('status').innerHTML = `<i class="fas fa-circle-check"></i> Connected via Teams Files`; }
   </script>
 </body>
 </html>
